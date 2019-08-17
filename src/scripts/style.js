@@ -92,5 +92,16 @@ module.exports = [
             'label': 'data(name)',
             'font-size': 5
         }
-    }
+    },
+    // css for ruler tick pointer
+    {
+        selector: '.ruler-tick-pointer',
+        style: {
+            'shape': 'ellipse',
+            'width': 1,
+            'height': 1,
+            'background-color': '#ffb266',
+            'label': ''
+        }
+    },
 ];

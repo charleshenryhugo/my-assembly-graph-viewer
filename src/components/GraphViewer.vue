@@ -43,7 +43,11 @@ export default {
       MAX_CONTIG_LEN: 0.0,
       MIN_CONTIG_LEN: 0.0,
       MAX_CONTIG_DISPLAY_LEN: 25.0,
-      MIN_CONTIG_DISPLAY_LEN: 3.0
+      MIN_CONTIG_DISPLAY_LEN: 3.0,
+
+      ruler_render_start_pos: {
+        x: 0, y: 50
+      }
     }
   },
 
@@ -168,7 +172,31 @@ export default {
         cy.$(`#${c.id}-5-3`).on( 'tap', updateCurrentContig );
         cy.$(`#${c.id}-5-3-box`).on( 'tap', updateCurrentContig );
 
-        cy.$(`#${c.id}-5-3-box`).on( 'drag', function() {  } );
+        var removeTickPointer = function() {
+          cy.$(`#tick-pointer-5`).remove();
+          cy.$(`#tick-pointer-3`).remove();
+        };
+        cy.$(`#${c.id}-5-3-box`).on( 'dragfree', removeTickPointer );
+        cy.$(`#${c.id}-5-3-box`).on( 'drag', function() {
+          removeTickPointer();
+          var ruler_tick_pointer_pos = {
+            x_5: cy.$(`#${c.id}-5`).renderedPosition().x,
+            x_3: cy.$(`#${c.id}-3`).renderedPosition().x,
+            y: _this.ruler_render_start_pos.y
+          };
+          cy.add( [
+            {
+              data: { id: 'tick-pointer-5' },
+              renderedPosition: { x: ruler_tick_pointer_pos.x_5, y: ruler_tick_pointer_pos.y },
+              classes: 'ruler-tick-pointer'
+            },
+            {
+              data: { id: 'tick-pointer-3' },
+              renderedPosition: { x: ruler_tick_pointer_pos.x_3, y: ruler_tick_pointer_pos.y },
+              classes: 'ruler-tick-pointer'
+            },
+          ] );
+        } );
 
       });
     },
@@ -282,7 +310,6 @@ export default {
         rendered_length: cy.$( `#${longest_contig_id}-3` ).renderedPosition().x - cy.$( `#${longest_contig_id}-5` ).renderedPosition().x // pixel
       };
 
-      var ruler_start_x = 0;
       for ( var t = 0; t < 71; t++ ) {
         // TODO make Label number more reasonable
         var toLabel = function(t) {
@@ -297,7 +324,7 @@ export default {
         cy.add( [
             {
               data: { id: `ruler-tick-${t}`, name: toLabel(t) },
-              renderedPosition: { x: ruler_start_x + shortest_contig.rendered_length * t, y: 50},
+              renderedPosition: { x: _this.ruler_render_start_pos.x + shortest_contig.rendered_length * t, y: _this.ruler_render_start_pos.y},
               pannable: false,
               grabbable: false, 
               classes: ( t % 5 == 0 ) ? 'ruler-tick-large' : 'ruler-tick'
