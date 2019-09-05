@@ -21,11 +21,13 @@ contigs_dict = dict()
 # graph structure for cluster & community the big graph
 MG = nx.MultiGraph()
 
+# overview description of graph clusters
+clusters_overview = []
+
 # make contigs_dict and Multi Graph from GFA file
 # construct contigs_dict
-# gfa1 ok, not for gfa2 yet
+# gfa1 supported; not supporting gfa2 yet
 def parse_gfa(filename):
-    # TODO use gfapy
     with open(filename) as f:
         for line in f:
             eles = line.split()
@@ -42,12 +44,25 @@ def write_json(json_data, outfile_name):
     with open(outfile_name, 'w', encoding='utf-8') as outfile:
         json.dump(json_data, outfile, ensure_ascii=False, indent=2)
 
-    print('finished writing {filename}'.format(filename=outfile_name))
+    # print('finished writing {filename}'.format(filename=outfile_name))
 
 # recursively decompose a multi graph to small communities (nodes <= 50)
 # under a certain cluster directory: cur_work_dir ( e.g. ./data/miniasam_cluster_10/ )
 # create sub directories recursively
-def decompose_multi_graph_communities(cur_work_dir, community_id, multi_graph):
+def decompose_multi_graph_communities(cur_work_dir, cluster_id, community_id, multi_graph):
+
+    # append communities tree to current cluster_id
+    community_layers = cur_work_dir[ len(data_dir)+1: ].split('/')[1:] # ['29','7','1',...'4']
+    target = clusters_overview[cluster_id]['communities']
+    for layer in community_layers:
+        target.setdefault( layer, {
+            'community_id': int(layer),
+            'community_dir': cur_work_dir,
+            'size': len( multi_graph ),
+            'communities': {}
+        })
+        target = target[layer]['communities']
+
     if len( multi_graph ) <= 50:
         contigs_collection = [
             [
@@ -64,11 +79,11 @@ def decompose_multi_graph_communities(cur_work_dir, community_id, multi_graph):
         ]
 
         contigs_outfile_name = \
-            '{cur_work_dir}/contigs_{community_id}.json'.format(cur_work_dir=cur_work_dir, community_id=community_id)
+            '{cur_work_dir}/contigs.json'.format(cur_work_dir=cur_work_dir)
         write_json(contigs_collection, contigs_outfile_name)
-        
+
         links_outfile_name = \
-            '{cur_work_dir}/links_{community_id}.json'.format(cur_work_dir=cur_work_dir, community_id=community_id)
+            '{cur_work_dir}/links.json'.format(cur_work_dir=cur_work_dir)
         write_json(links_collection, links_outfile_name)
 
     else:
@@ -78,7 +93,8 @@ def decompose_multi_graph_communities(cur_work_dir, community_id, multi_graph):
                 os.makedirs(community_dir)
 
             edges_community = multi_graph.edges( nodes_community )
-            decompose_multi_graph_communities( community_dir, c_id, nx.MultiGraph(edges_community) )
+            decompose_multi_graph_communities( community_dir, cluster_id, c_id, nx.MultiGraph(edges_community) )
+
 
 
 def main(argv):
@@ -91,9 +107,23 @@ def main(argv):
     if not argv[1] is None:
         assembler = str( argv[1] )
 
-    for cluster_id, contigs_cluster_graph in enumerate(nx.connected_component_subgraphs(MG)):
+    for cluster_id, contigs_cluster_graph in enumerate( nx.connected_component_subgraphs(MG) ):
 
-        # write cluster to js if contigs number <= 50
+        # make directory for current cluster id
+        cluster_dir = '{data_dir}/{assembler}_cluster_{id}'.format(data_dir=data_dir, assembler=assembler, id=cluster_id)
+        if not os.path.exists(cluster_dir):
+            os.makedirs(cluster_dir)
+
+        # append to clusters_overview: []
+        # clusters_overview[cluster_id] = { 'cluster_id': cluster_id, ... }
+        clusters_overview.append({
+            'cluster_id': cluster_id,
+            'cluster_dir': cluster_dir,
+            'size': len( contigs_cluster_graph ),
+            'communities': {}
+        })
+
+        # write cluster to json if contigs number <= 50
         if len(contigs_cluster_graph) <= 50:
 
             contigs_collection = [
@@ -112,22 +142,18 @@ def main(argv):
 
             # write json to file
             contigs_outfile_name = \
-                '{data_dir}/{assembler}_contigs_cluster_{id}.json'.format(data_dir=data_dir, assembler=assembler, id=cluster_id)
+                '{cluster_dir}/contigs.json'.format(cluster_dir=cluster_dir)
             write_json(contigs_collection, contigs_outfile_name)
 
             links_outfile_name = \
-                '{data_dir}/{assembler}_links_cluster_{id}.json'.format(data_dir=data_dir, assembler=assembler, id=cluster_id)
+                '{cluster_dir}/links.json'.format(cluster_dir=cluster_dir)
             write_json(links_collection, links_outfile_name)
 
         else:
-            # make directory for current cluster id
-            cluster_dir = '{data_dir}/{assembler}_cluster_{id}'.format(data_dir=data_dir, assembler=assembler, id=cluster_id)
-            if not os.path.exists(cluster_dir):
-                os.makedirs(cluster_dir)
-            
+            # cluster size > 50
             # recursively calculate communities
             # under the cluster folder: ./data/miniasam_cluster_10/
-            decompose_multi_graph_communities(cluster_dir, -1, contigs_cluster_graph)
+            decompose_multi_graph_communities(cluster_dir, cluster_id, -1, contigs_cluster_graph)
 
 
     # write isolated contigs data
@@ -142,8 +168,25 @@ def main(argv):
         for contig in contigs_dict.items()
     ]
 
-    outfile_name = '{data_dir}/{assembler}_isolated_contigs.json'.format(data_dir=data_dir, assembler=assembler)
-    write_json(isolated_contigs_collection, outfile_name)
+    isolated_contigs_cluster_dir = '{data_dir}/isolated_contigs_cluster'.format(data_dir=data_dir)
+    if not os.path.exists(isolated_contigs_cluster_dir):
+        os.makedirs(isolated_contigs_cluster_dir)
+
+    contigs_outfile_name = '{isolated_contigs_cluster_dir}/contigs.json'.format(isolated_contigs_cluster_dir=isolated_contigs_cluster_dir)
+    links_outfile_name = '{isolated_contigs_cluster_dir}/links.json'.format(isolated_contigs_cluster_dir=isolated_contigs_cluster_dir)
+    write_json(isolated_contigs_collection, contigs_outfile_name)
+    write_json([], links_outfile_name)
+
+    # append isolated_contigs to clusters_overview: [...]
+    clusters_overview.append({
+        'cluster_id': len( clusters_overview ),
+        "isolated_contigs_cluster": True,
+        'cluster_dir': isolated_contigs_cluster_dir,
+        'size': len( isolated_contigs_collection ),
+        'communities': {}
+    })
+    # write overview.json
+    write_json(clusters_overview, '{data_dir}/overview.json'.format(data_dir=data_dir) )
 
 
 

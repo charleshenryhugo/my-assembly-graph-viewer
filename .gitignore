@@ -22,3 +22,8 @@ yarn-error.log*
 
 # data files
 *data/
+rawdata/
+
+# ipynb
+Untitled.ipynb
+.ipynb_checkpoints

@@ -21,7 +21,7 @@
         style="width: 30%"
         class="ml-0 pl-4"
       >
-        <span class="hidden-sm-and-down">highly interactive assembly graph viewer</span>
+        <span class="hidden-sm-and-down">VILAG</span>
       </v-toolbar-title>
       <v-text-field
         flat
@@ -43,7 +43,17 @@
           align-center
           justify-center
         >
-          <GraphViewer/>
+          <ClustersViewer
+            v-if="viewer_type==='clusters'"
+          />
+          <GraphViewer
+            v-if="viewer_type==='graph'"
+            :graph_dir="graph_dir"
+          />
+          <CommunitiesViewer
+            v-if="viewer_type==='communities'"
+            :communities="communities"
+          />
         </v-layout>
       </v-container>
     </v-content>
@@ -54,24 +64,64 @@
 </template>
 
 <script>
+import ClustersViewer from './components/ClustersViewer';
+import CommunitiesViewer from './components/CommunitiesViewer';
 import GraphViewer from './components/GraphViewer';
 import SidePanel from './components/SidePanel';
+
+// event bus for communication with SidePanel
+import { EventBus } from './scripts/event-bus.js';
 
 export default {
   name: 'App',
   components: {
+    ClustersViewer,
+    CommunitiesViewer,
     GraphViewer,
     SidePanel
   },
 
-  props: {
-    source: String,
+  data() {
+    return {
+      // left side panel
+      drawer: null,
+
+      /**
+       * viewer_type: which component v-content renders
+       * 'clusters', 'communities', 'graph'
+       * initialized by 'clusters'
+       */
+      viewer_type: null,
+
+      // last rendered graph dir
+      graph_dir: null,
+
+      // last rendered community
+      communities: null,
+    };
   },
 
-  data: () => ({
-    drawer: null,
-    items: [
-    ]
-  }),
+  created() {
+    this.viewer_type = 'clusters'
+  },
+
+  mounted() {
+    var _this = this;
+
+    EventBus.$on( 'viewer_type_graph', function(graph_dir) {
+      _this.viewer_type = 'graph';
+      _this.graph_dir = graph_dir;
+    } );
+
+    EventBus.$on( 'viewer_type_communities', function(communities) {
+      _this.viewer_type = 'communities';
+      _this.communities = communities;
+    } );
+
+    EventBus.$on( 'viewer_type_clusters', function() {
+      _this.viewer_type = 'clusters';
+    } )
+  },
+
 }
 </script>

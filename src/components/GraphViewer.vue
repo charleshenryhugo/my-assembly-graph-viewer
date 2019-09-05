@@ -1,5 +1,5 @@
 <template>
-  <div id="cy"></div>
+  <div id="GraphViewer"></div>
 </template>
 
 <script>
@@ -18,6 +18,10 @@ let cy = null;
 export default {
   name: 'GraphViewer',
   components: {
+  },
+
+  props: {
+    graph_dir: String,
   },
 
   data() {
@@ -58,18 +62,17 @@ export default {
   },
 
   mounted() {
-
-    // dynamically read json data ( /data/xxx.json in public folder )
-    // this.current_selection.current_cluster = 15;
-    // this.current_selection.current_community = -1;
-    var init_load = {
-      contigs_file: 'data/miniasm_contigs_cluster_15.json',
-      links_file: 'data/miniasm_links_cluster_15.json'
-    }
     var _this = this;
-    this.$axios.get( init_load.contigs_file ).then( function(contigs_response) {
 
-      _this.$axios.get( init_load.links_file ).then( function(links_response) {
+    var rel_graph_dir = this.graph_dir.match(/(data\/.*cluster_.*\d|data\/isolated_contigs_cluster)$/)[0]
+    console.log('start loading graph: ' + rel_graph_dir)
+
+    var contigs_file = `${rel_graph_dir}/contigs.json`;
+    var links_file = `${rel_graph_dir}/links.json`;
+
+    this.$axios.get( contigs_file ).then( function(contigs_response) {
+
+      _this.$axios.get( links_file ).then( function(links_response) {
         // console.log( contigs_response.data )
         // console.log( links_response.data )
         _this.contigs = contigs_response.data;
@@ -99,7 +102,7 @@ export default {
       this.contig_lens = this.contigs.map( c => Number(c[2].slice(5)) );
       this.MIN_CONTIG_LEN = Math.min(...this.contig_lens);
       this.MAX_CONTIG_LEN = Math.max(...this.contig_lens);
-      
+
       this.contig_ids = this.contigs.map( c => c[0] );
       // contigs centers position
       let contig_centers = this.contigs.map(function(c) {
@@ -108,18 +111,19 @@ export default {
         };
       });
       // links among contigs
+      this.links = this.links.filter( function(l) {
+        return _this.contig_ids.includes(l[0]) && _this.contig_ids.includes(l[2]);
+      } );
       let contig_centers_links = this.links.map(function(l) {
-        if ( _this.contig_ids.includes( (l[0], l[2]) ) ) {
-          return {
-            data: {
-              id: `${l[0]}${l[2]}`, source: l[0], target: l[2]
-            }
-          };
-        }
+        return {
+          data: {
+            id: `${l[0]}${l[2]}`, source: l[0], target: l[2]
+          }
+        };
       })
 
       cy = this.$cytoscape({
-        container: document.querySelector('#cy'),
+        container: document.querySelector('#GraphViewer'),
 
         elements: {
             nodes: contig_centers,
@@ -217,7 +221,7 @@ export default {
         var use_class = 'contig-link-edge';
 
         // break forEach if a link's source or end not in current this.contigs
-        if ( !_this.contig_ids.includes( (source, target) ) ){
+        if ( !_this.contig_ids.includes(source) || !_this.contig_ids.includes(target) ) {
           return
         }
 
@@ -319,7 +323,7 @@ export default {
               [ shortest_contig.rendered_length, longest_contig.rendered_length ],
               [ _this.MIN_CONTIG_LEN, _this.MAX_CONTIG_LEN ]
             );
-          return ( result <= 1000.0 ) ? result : d3.format('.0f')( result / 1000.0 ) + 'K';
+          return ( result <= 1000.0 ) ? d3.format('.0f')(result) : d3.format('.0f')( result / 1000.0 ) + 'K';
         };
         cy.add( [
             {
@@ -427,7 +431,7 @@ export default {
 </script>
 
 <style scoped>
-  #cy {
+  #GraphViewer {
     height: 100%;
     width: 100%;
     position: absolute;

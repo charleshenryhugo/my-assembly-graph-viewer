@@ -10,6 +10,22 @@
         Current Selection
       </v-card-title>
 
+      <v-btn
+        text
+        color="primary"
+        @click.stop="clusterClicked"
+      >
+        {{ current_selection.current_cluster_description }}
+      </v-btn>
+
+      <v-btn
+        text
+        color="blue"
+        @click.stop="communityClicked"
+      >
+        {{ current_selection.current_community_description }}
+      </v-btn>
+
       <v-card-text>
         <v-treeview
           :items="current_selection.current_contig_or_link_tree"
@@ -28,6 +44,14 @@
       <v-card-title>
         Graph Info
       </v-card-title>
+
+      <v-btn
+        text
+        color="primary"
+        @click.stop="loadWholeGraph"
+      >
+        whole graph
+      </v-btn>
 
       <v-card-text>
         <v-treeview
@@ -53,10 +77,15 @@ export default {
   },
   data() {
     return {
-      graph_info_panels: [0, 2],
 
-      current_selection: { 
-        current_contig_or_link: 'no selection',
+      current_selection: {
+        current_cluster: null,
+        current_cluster_description: null,
+
+        current_community: null,
+        current_community_description: null,
+
+        current_contig_or_link: null,
         current_contig_or_link_tree: []
       },
 
@@ -84,6 +113,28 @@ export default {
 
   mounted() {
     var _this = this;
+
+    // user's tap on a cluster
+    // load tapped cluster's info
+    EventBus.$on( 'clusterSelectionUpdated', function(current_selected_object) {
+      _this.current_selection.current_cluster = current_selected_object;
+      _this.current_selection.current_cluster_description = '' +
+            `cluster_${current_selected_object.cluster_id}, ` +
+            `${current_selected_object.size} contigs, ` +
+            `${Object.keys(current_selected_object.communities).length} communities.`
+
+    } );
+
+    // user's tap on a community
+    // load tapped community's info
+    EventBus.$on( 'communitySelectionUpdated', function(current_selected_object) {
+      _this.current_selection.current_community = current_selected_object;
+      _this.current_selection.current_community_description = '' +
+            `community_${current_selected_object.community_id}, ` +
+            `${current_selected_object.size} contigs, ` +
+            `${Object.keys(current_selected_object.communities).length} communities.`
+
+    } );
 
     EventBus.$on( 'currentSelectionUpdated', function(current_selected_object, type) {
       _this.current_selection.current_contig_or_link = current_selected_object;
@@ -149,6 +200,45 @@ export default {
       } );
     });
   },
+
+  methods: {
+    /**
+     * current cluster description's button clicked
+     */
+    clusterClicked() {
+      var _this = this;
+      if ( Object.keys(_this.current_selection.current_cluster.communities).length === 0 ){
+        // send data to App.vue, render graph
+        EventBus.$emit( 'viewer_type_graph', _this.current_selection.current_cluster.cluster_dir );
+      } else {
+        EventBus.$emit( 'viewer_type_communities', _this.current_selection.current_cluster.communities );
+        // send data to App.vue, render communities
+      }
+    },
+
+    /**
+     * current community description's button clicked
+     */
+    communityClicked() {
+      var _this = this;
+      if ( Object.keys(_this.current_selection.current_community.communities).length === 0 ){
+        // send data to App.vue, render graph
+        EventBus.$emit( 'viewer_type_graph', _this.current_selection.current_community.community_dir );
+      } else {
+        EventBus.$emit( 'viewer_type_communities', _this.current_selection.current_community.communities );
+        // send data to App.vue, render communities
+      }
+    },
+
+    /**
+     * whole graph button clicked
+     */
+    loadWholeGraph() {
+      this.current_selection.current_cluster_description = null;
+      this.current_selection.current_community_description = null;
+      EventBus.$emit( 'viewer_type_clusters' );
+    }
+  }
 }
 </script>
 
