@@ -314,7 +314,7 @@ export default {
         rendered_length: cy.$( `#${longest_contig_id}-3` ).renderedPosition().x - cy.$( `#${longest_contig_id}-5` ).renderedPosition().x // pixel
       };
 
-      for ( var t = 0; t < 71; t++ ) {
+      for ( var t = 0; t < 300; t++ ) {
         // TODO make Label number more reasonable
         var toLabel = function(t) {
           if ( t == 0 ) { return '0'; }
@@ -339,7 +339,7 @@ export default {
 
       // fix y coordinate while panning(or zooming)
       cy.on('pan', function() {
-        for ( var t = 0; t < 71; t++ ) {
+        for ( var t = 0; t < 300; t++ ) {
           var x = cy.$(`#ruler-tick-${t}`).renderedPosition().x;
           cy.$(`#ruler-tick-${t}`).renderedPosition({
             x: x, y: 50

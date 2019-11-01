@@ -46,7 +46,7 @@ export default {
           data: { 
             id: cluster.cluster_id,
             size: 10 * Math.log2(cluster.size),
-            description: `cluster_${cluster.cluster_id}, size=${cluster.size}`
+            description: `#${cluster.cluster_id}, size ${cluster.size}`
           }
         }
       } );

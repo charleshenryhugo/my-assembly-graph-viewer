@@ -23,14 +23,6 @@
       >
         <span class="hidden-sm-and-down">VILAG</span>
       </v-toolbar-title>
-      <v-text-field
-        flat
-        solo-inverted
-        hide-details
-        prepend-inner-icon=""
-        label="Search"
-        class="hidden-sm-and-down"
-      ></v-text-field>
       <v-spacer></v-spacer>
     </v-app-bar>
 

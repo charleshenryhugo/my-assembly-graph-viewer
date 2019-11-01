@@ -3,6 +3,7 @@ import os
 import json
 import networkx as nx
 from networkx.algorithms import community
+import pdb
 
 # contigs(links) data directory
 data_dir = os.path.join( os.getcwd(), 'data' )
@@ -49,7 +50,7 @@ def write_json(json_data, outfile_name):
 # recursively decompose a multi graph to small communities (nodes <= 50)
 # under a certain cluster directory: cur_work_dir ( e.g. ./data/miniasam_cluster_10/ )
 # create sub directories recursively
-def decompose_multi_graph_communities(cur_work_dir, cluster_id, community_id, multi_graph):
+def decompose_multi_graph_communities(cur_work_dir, cluster_id, community_id, multi_graph, expansion_edges):
 
     # append communities tree to current cluster_id
     community_layers = cur_work_dir[ len(data_dir)+1: ].split('/')[1:] # ['29','7','1',...'4']
@@ -59,7 +60,8 @@ def decompose_multi_graph_communities(cur_work_dir, cluster_id, community_id, mu
             'community_id': int(layer),
             'community_dir': cur_work_dir,
             'size': len( multi_graph ),
-            'communities': {}
+            'communities': {},
+            'expansion_edges': expansion_edges
         })
         target = target[layer]['communities']
 
@@ -87,13 +89,38 @@ def decompose_multi_graph_communities(cur_work_dir, cluster_id, community_id, mu
         write_json(links_collection, links_outfile_name)
 
     else:
-        for c_id, nodes_community in enumerate( community.greedy_modularity_communities(multi_graph) ):
+        nodes_communities = list( community.greedy_modularity_communities(multi_graph) )
+        for c_id, nodes_community in enumerate( nodes_communities ):
             community_dir = '{cwd}/{c_id}'.format(cwd=cur_work_dir, c_id=c_id)
             if not os.path.exists(community_dir):
                 os.makedirs(community_dir)
 
-            edges_community = multi_graph.edges( nodes_community )
-            decompose_multi_graph_communities( community_dir, cluster_id, c_id, nx.MultiGraph(edges_community) )
+            # find the linkages with other communities in the same layer
+            shared_expansion_edges = dict()
+            tempG = nx.MultiGraph( multi_graph.edges( nodes_community ) )
+            multi_graph_this_expansion = multi_graph.subgraph( tempG.nodes )
+            multi_graph_this = multi_graph.subgraph( nodes_community )
+            expansion_edges_this = set([ tuple(data[2]) for data in multi_graph_this_expansion.edges.data('desc') ]) -\
+                set([ tuple(data[2]) for data in multi_graph_this.edges.data('desc') ])
+
+            for X, other_nodes_community in enumerate( nodes_communities ):
+                if c_id == X:
+                    continue
+                try:
+                    target = clusters_overview[cluster_id]['communities']
+                    for layer in community_layers[:-1]:
+                        target = target[layer]['communities']
+                    shared_expansion_edges[X] = target[str(X)]['expansion_edges'][c_id]
+                except:
+                    tempG = nx.MultiGraph( multi_graph.edges( other_nodes_community ) )
+                    multi_graph_X_expansion = multi_graph.subgraph( tempG.nodes )
+                    multi_graph_X = multi_graph.subgraph( other_nodes_community )
+                    expansion_edges_X = set([ tuple(data[2]) for data in multi_graph_X_expansion.edges.data('desc') ]) -\
+                        set([ tuple(data[2]) for data in multi_graph_X.edges.data('desc') ])
+                    if len(expansion_edges_X & expansion_edges_this) > 0:
+                        shared_expansion_edges[X] = list( expansion_edges_X & expansion_edges_this )
+
+            decompose_multi_graph_communities( community_dir, cluster_id, c_id, multi_graph.subgraph( nodes_community ), shared_expansion_edges )
 
 
 
@@ -153,7 +180,7 @@ def main(argv):
             # cluster size > 50
             # recursively calculate communities
             # under the cluster folder: ./data/miniasam_cluster_10/
-            decompose_multi_graph_communities(cluster_dir, cluster_id, -1, contigs_cluster_graph)
+            decompose_multi_graph_communities(cluster_dir, cluster_id, -1, contigs_cluster_graph, -1)
 
 
     # write isolated contigs data

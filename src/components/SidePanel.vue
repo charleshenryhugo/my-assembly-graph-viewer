@@ -9,28 +9,50 @@
       <v-card-title>
         Current Selection
       </v-card-title>
-
-      <v-btn
-        text
-        color="primary"
-        @click.stop="clusterClicked"
-      >
-        {{ current_selection.current_cluster_description }}
-      </v-btn>
-
-      <v-btn
-        text
-        color="blue"
-        @click.stop="communityClicked"
-      >
-        {{ current_selection.current_community_description }}
-      </v-btn>
-
+      
       <v-card-text>
-        <v-treeview
-          :items="current_selection.current_contig_or_link_tree"
+
+        <v-breadcrumbs
+          class="pa-2"
+          :items="current_selection.community_layers"
+          divider="/"
+          v-if="current_selection.community_layers.length"
+        ></v-breadcrumbs>
+
+        <v-btn
+          class="pa-2"
+          text
+          color="primary"
+          @click.stop="clusterClicked"
+          v-if="current_selection.current_cluster_description"
         >
+          <h5>{{ current_selection.current_cluster_description }}</h5>
+        </v-btn>
+
+        <v-btn
+          class="pa-2"
+          text
+          color="primary"
+          @click.stop="communityClicked"
+          v-if="current_selection.current_community_description"
+        >
+          <h5>{{ current_selection.current_community_description }}</h5>
+        </v-btn>
+
+
+        <v-treeview
+          open-on-click
+          activatable
+          hoverable
+          dense
+          :items="current_selection.current_contig_or_link_tree"
+          v-if="current_selection.current_contig_or_link_tree.length"
+        >
+          <template v-slot:label="{ item, open, selected }">
+            <TreeviewItemTemplate :item="item"/>
+          </template>
         </v-treeview>
+
       </v-card-text>
 
       <v-divider></v-divider>
@@ -43,24 +65,51 @@
     >
       <v-card-title>
         Graph Info
+        <v-btn
+          text
+          color="primary"
+          @click.stop="loadWholeGraph"
+        >
+          <h5>reload whole graph</h5>
+        </v-btn>
       </v-card-title>
 
-      <v-btn
-        text
-        color="primary"
-        @click.stop="loadWholeGraph"
+      <v-text-field
+        class="pa-2"
+        outlined
+        clearable
+        clear-icon="mdi-close-circle-outline"
+        append-icon="mdi-magnify"
+        @click:append="search_contig_by_id"
+        label="Search contig by id"
       >
-        whole graph
-      </v-btn>
+      </v-text-field>
 
       <v-card-text>
         <v-treeview
+          open-on-click
+          activatable
+          hoverable
+          dense
           :items="graph_info.contigs_tree"
+          v-if="graph_info.contigs_tree.length"
         >
+          <template v-slot:label="{ item, open, selected }">
+            <TreeviewItemTemplate :item="item"/>
+          </template>
         </v-treeview>
+
         <v-treeview
+          open-on-click
+          activatable
+          hoverable
+          dense
           :items="graph_info.links_tree"
+          v-if="graph_info.links_tree.length"
         >
+          <template v-slot:label="{ item, open, selected }">
+            <TreeviewItemTemplate :item="item"/>
+          </template>
         </v-treeview>
       </v-card-text>
     </v-card>
@@ -70,15 +119,19 @@
 <script>
 // event bus for communication with GraphViewer
 import { EventBus } from '../scripts/event-bus.js';
+import TreeviewItemTemplate from './TreeviewItemTemplate.vue';
 
 export default {
   name: 'SidePanel',
   components: {
+    TreeviewItemTemplate,
   },
   data() {
     return {
 
       current_selection: {
+        community_layers: [],
+
         current_cluster: null,
         current_cluster_description: null,
 
@@ -98,110 +151,140 @@ export default {
   },
 
   created() {
-    this.graph_info.contigs_tree = [ {
-      id: 'contigs_tree_root',
-      name: 'contigs',
-      children: []
-    } ];
+    this.current_selection.community_layers = [];
+    this.current_selection.current_contig_or_link_tree = [];
 
-    this.graph_info.links_tree = [ {
-      id: 'links_tree_root',
-      name: 'links',
-      children: []
-    } ];
+    this.graph_info.contigs_tree = [];
+
+    this.graph_info.links_tree = [];
   },
 
   mounted() {
     var _this = this;
 
-    // user's tap on a cluster
-    // load tapped cluster's info
-    EventBus.$on( 'clusterSelectionUpdated', function(current_selected_object) {
+    // user's tap on a cluster ball
+    // load tapped cluster's description
+    EventBus.$on( 'clusterSelectionUpdated',
+                  (current_selected_object) => _this.clusterSelectionUpdated(current_selected_object));
+
+    // user's tap on a community ball
+    // load tapped community's description
+    EventBus.$on( 'communitySelectionUpdated',
+                  (current_selected_object) => _this.communitySelectionUpdated(current_selected_object) );
+
+    EventBus.$on( 'currentSelectionUpdated',
+                  (current_selected_object, type) => _this.currentSelectionUpdated(current_selected_object, type) );
+
+    EventBus.$on( 'contigsUpdated', (contigs) => _this.contigsUpdated(contigs) );
+
+    EventBus.$on( 'linksUpdated', (links) => _this.linksUpdated(links) );
+  },
+
+  methods: {
+    // callbacks for EventBus event
+
+    /**
+     * clusterSelectionUpdated
+     */
+    clusterSelectionUpdated(current_selected_object) {
+      var _this = this;
       _this.current_selection.current_cluster = current_selected_object;
       _this.current_selection.current_cluster_description = '' +
-            `cluster_${current_selected_object.cluster_id}, ` +
+            `cluster#${current_selected_object.cluster_id}, ` +
             `${current_selected_object.size} contigs, ` +
-            `${Object.keys(current_selected_object.communities).length} communities.`
+            `${Object.keys(current_selected_object.communities).length} communities`;
+    },
 
-    } );
-
-    // user's tap on a community
-    // load tapped community's info
-    EventBus.$on( 'communitySelectionUpdated', function(current_selected_object) {
+    /**
+     * communitySelectionUpdated
+     */
+    communitySelectionUpdated(current_selected_object) {
+      var _this = this;
       _this.current_selection.current_community = current_selected_object;
       _this.current_selection.current_community_description = '' +
             `community_${current_selected_object.community_id}, ` +
             `${current_selected_object.size} contigs, ` +
-            `${Object.keys(current_selected_object.communities).length} communities.`
+            `${Object.keys(current_selected_object.communities).length} communities`;
+    },
 
-    } );
-
-    EventBus.$on( 'currentSelectionUpdated', function(current_selected_object, type) {
+    /**
+     * currentSelectionUpdated
+     * @param type: 'contig', 'link', 'current_selected_link'
+     */
+    currentSelectionUpdated(current_selected_object, type) {
+      var _this = this;
       _this.current_selection.current_contig_or_link = current_selected_object;
 
       if (type === 'contig') {
+        var contig = current_selected_object;
         _this.current_selection.current_contig_or_link_tree = [ {
-          id: 'current_selected_contig',
-          name: current_selected_object[0],
+          id: 'current_selected_contig', name: contig[0],
           children: [
-            { name: `length: ${current_selected_object[2]}` },
-            { name: `tag: ${current_selected_object[2]}` },
-            {
-              name: `sequence`, 
-              children: [ { name: current_selected_object[1] } ] 
-            }
+            { id: `${contig[0]}-${contig[2]}`, name: contig[2] },
+            { name: `${contig[1].slice(0,600)} ...` }
           ]
         } ];
       } else if (type === 'link') {
+        var l = current_selected_object;
         var source = current_selected_object[0], target = current_selected_object[2];
         _this.current_selection.current_contig_or_link_tree = [ {
           id: 'current_selected_link',
-          name: `${source}-${target}`,
+          name: `${l[0]}-${l[2]}`,
           children: [
-            { name: `cigar: ${current_selected_object[4]}` },
-            { name: `tag: ${current_selected_object[5]}` },
-            { name: `more options...` }
+            { id: l.join(''), name: l.join(' ') },
           ]
         } ];
+      } else if (type === 'community_link') {
+        _this.current_selection.current_contig_or_link_tree = [{
+          id: 'current_selected_community_link', name: 'links between the 2 communities',
+          children: current_selected_object.map( function(l) {
+            return {
+              id: `${l[0]}-${l[2]}`,
+              name: l.join(' '),
+            }
+          })
+        }];
       }
 
-    });
+    },
 
-    EventBus.$on( 'contigsUpdated', function( contigs ) {
-      _this.graph_info.contigs_tree[0].children = contigs.map( function(contig) {
-        return {
-          id: contig[0],
-          name: contig[0],
-          children: [
-            { name: `length: ${contig[2]}` },
-            { name: `tag: ${contig[2]}` },
-            {
-              name: `sequence`, 
-              children: [ { name: contig[1] } ] 
-            }
-          ]
-        };
-      } );
-    });
+    /**
+     * contigsUpdated: graph changed => contigs changed
+     */
+    contigsUpdated( contigs ) {
+      var _this = this;
+      _this.graph_info.contigs_tree = [ {
+        id: 'contigs_tree_root', name: 'contigs',
+        children: contigs.map( function(contig) {
+          return {
+            id: contig[0],
+            name: contig[0],
+            children: [
+              { id: `${contig[0]}-${contig[2]}`, name: contig[2] },
+              { name: `${contig[1].slice(0,600)} ...` }
+            ]
+          };
+        } )
+      } ];
+    },
 
-    EventBus.$on( 'linksUpdated', function( links ) {
-      _this.graph_info.links_tree[0].children = links.map( function(link) {
-        var source = link[0], target = link[2];
-        // TODO remove duplicate links
-        // TODO apply id
-        return {
-          name: `${source}-${target}`,
-          children: [
-            { name: `cigar: ${link[4]}` },
-            { name: `tag: ${link[5]}` },
-            { name: `more options...` }
-          ]
-        };
-      } );
-    });
-  },
+    /**
+     * linksUpdated: graph changed => links changed
+     */
+    linksUpdated( links ) {
+      var _this = this;
+      _this.graph_info.links_tree = [ {
+        id: 'links_tree_root', name: 'links',
+        children: links.map( function(l) {
+          return {
+            id: l.join(''),
+            name: l.join(' ')
+          };
+        } )
+      } ];
+    },
+    // end callbacks for EventBus event
 
-  methods: {
     /**
      * current cluster description's button clicked
      */
@@ -214,6 +297,11 @@ export default {
         EventBus.$emit( 'viewer_type_communities', _this.current_selection.current_cluster.communities );
         // send data to App.vue, render communities
       }
+
+      // update breadbrumbs
+      _this.current_selection.community_layers = [
+        { text: `cluster ${_this.current_selection.current_cluster.cluster_id}` }
+      ];
     },
 
     /**
@@ -228,6 +316,16 @@ export default {
         EventBus.$emit( 'viewer_type_communities', _this.current_selection.current_community.communities );
         // send data to App.vue, render communities
       }
+      // update breadcrumbs
+      var community_layers = _this.current_selection.current_community.community_dir
+          .match(/(data\/.*cluster_.*\d|data\/isolated_contigs_cluster)$/)[0].split('/').slice(2);
+
+      _this.current_selection.community_layers = [{
+        text: `cluster ${_this.current_selection.current_cluster.cluster_id}`
+      }]
+      community_layers.forEach( c => {
+        _this.current_selection.community_layers.push({ text: `Community${c}` });
+      });
     },
 
     /**
@@ -236,7 +334,19 @@ export default {
     loadWholeGraph() {
       this.current_selection.current_cluster_description = null;
       this.current_selection.current_community_description = null;
+      this.current_selection.community_layers = [];
+      this.current_selection.current_contig_or_link_tree = [];
+      this.graph_info.contigs_tree = [];
+      this.graph_info.links_tree = [];
       EventBus.$emit( 'viewer_type_clusters' );
+    },
+
+    /**
+     * search contig by id
+     */
+    search_contig_by_id() {
+      // TODO implement search
+      console.log('search contig by id');
     }
   }
 }
