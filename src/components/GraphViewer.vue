@@ -87,6 +87,9 @@ export default {
       } );
 
     } );
+
+    // search contig or link by ID from the current GraphViewer
+    EventBus.$on( 'search_contig_by_id', (id) => _this.search_contig_by_id(id) );
   },
 
   methods: {
@@ -425,6 +428,14 @@ export default {
       ];
     },
 
+    /**
+     * search contig by id from current GraphViewer
+     * highlight the found contig
+     */
+    search_contig_by_id(contig_id) {
+      cy.edges().removeClass('highlighted-contig-inner-edge');
+      cy.$(`#${contig_id}-5-3`).addClass('highlighted-contig-inner-edge');
+    }
   }
 }
 

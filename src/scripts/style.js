@@ -70,6 +70,13 @@ module.exports = [
             // 'arrow-scale': 0.1,
         }
     },
+    // css for highlighted contigs
+    {
+        selector: '.highlighted-contig-inner-edge',
+        style: {
+            'line-color': '#ffb266',
+        }
+    },
 
     // css for ruler tick
     {

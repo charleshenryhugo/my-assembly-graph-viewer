@@ -76,6 +76,7 @@
 
       <v-text-field
         class="pa-2"
+        v-model="search_box_input"
         outlined
         clearable
         clear-icon="mdi-close-circle-outline"
@@ -128,6 +129,7 @@ export default {
   },
   data() {
     return {
+      search_box_input: null,
 
       current_selection: {
         community_layers: [],
@@ -226,21 +228,19 @@ export default {
         } ];
       } else if (type === 'link') {
         var l = current_selected_object;
-        var source = current_selected_object[0], target = current_selected_object[2];
-        _this.current_selection.current_contig_or_link_tree = [ {
+        _this.current_selection.current_contig_or_link_tree = [{
           id: 'current_selected_link',
           name: `${l[0]}-${l[2]}`,
           children: [
             { id: l.join(''), name: l.join(' ') },
           ]
-        } ];
+        }];
       } else if (type === 'community_link') {
         _this.current_selection.current_contig_or_link_tree = [{
           id: 'current_selected_community_link', name: 'links between the 2 communities',
           children: current_selected_object.map( function(l) {
             return {
-              id: `${l[0]}-${l[2]}`,
-              name: l.join(' '),
+              id: l.join(''), name: l.join(' '),
             }
           })
         }];
@@ -343,10 +343,10 @@ export default {
 
     /**
      * search contig by id
+     * from current GraphViewer
      */
     search_contig_by_id() {
-      // TODO implement search
-      console.log('search contig by id');
+      EventBus.$emit('search_contig_by_id', this.search_box_input);
     }
   }
 }
