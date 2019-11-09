@@ -11,6 +11,7 @@
     "axios": "^0.19.0",
     "core-js": "^2.6.5",
     "cytoscape": "^3.8.2",
+    "cytoscape-automove": "^1.10.2",
     "cytoscape-dagre": "^2.2.2",
     "cytoscape-euler": "^1.2.1",
     "cytoscape-klay": "^3.1.2",

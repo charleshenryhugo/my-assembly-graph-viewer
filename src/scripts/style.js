@@ -26,7 +26,7 @@ module.exports = [
             // 'label': 'data(name)',
             'label': '',
             'border-width': 0.1,
-            'padding': 3,
+            'padding': 2,
         }
     },
 

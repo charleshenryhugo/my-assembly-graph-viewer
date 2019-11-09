@@ -158,7 +158,6 @@ export default {
 
         var c = {
           id: contig[0],
-          // seq: contig[1],
           length: Number(contig[2].slice(5)), // TODO: parse CIGAR, "LN:i:81568"
         }
 
@@ -167,9 +166,9 @@ export default {
 
         cy.remove( current_contig_center );
 
-        cy.add( _this.makeContig(c, pos) );
+        _this.addContig(c, pos);
 
-        // update current_contig on 'tap' event
+        // update current_contig in SidePanel on 'tap' event
         var updateCurrentContig = function() {
           _this.current_selection.current_contig = contig;
           _this.current_selection.current_link = null;
@@ -178,32 +177,6 @@ export default {
         }
         cy.$(`#${c.id}-5-3`).on( 'tap', updateCurrentContig );
         cy.$(`#${c.id}-5-3-box`).on( 'tap', updateCurrentContig );
-
-        var removeTickPointer = function() {
-          cy.$(`#tick-pointer-5`).remove();
-          cy.$(`#tick-pointer-3`).remove();
-        };
-        cy.$(`#${c.id}-5-3-box`).on( 'dragfree', removeTickPointer );
-        cy.$(`#${c.id}-5-3-box`).on( 'drag', function() {
-          removeTickPointer();
-          var ruler_tick_pointer_pos = {
-            x_5: cy.$(`#${c.id}-5`).renderedPosition().x,
-            x_3: cy.$(`#${c.id}-3`).renderedPosition().x,
-            y: _this.ruler_render_start_pos.y
-          };
-          cy.add( [
-            {
-              data: { id: 'tick-pointer-5' },
-              renderedPosition: { x: ruler_tick_pointer_pos.x_5, y: ruler_tick_pointer_pos.y },
-              classes: 'ruler-tick-pointer'
-            },
-            {
-              data: { id: 'tick-pointer-3' },
-              renderedPosition: { x: ruler_tick_pointer_pos.x_3, y: ruler_tick_pointer_pos.y },
-              classes: 'ruler-tick-pointer'
-            },
-          ] );
-        } );
 
       });
     },
@@ -394,6 +367,47 @@ export default {
     },
 
     /**
+     * add a contig to cy
+     * @param {Object} c { id, length(actual_length) }
+     */
+    addContig(c, pos) {
+      var _this = this;
+      cy.add( _this.makeContig(c, pos) );
+      cy.automove({
+        nodesMatching: cy.$(`#${c.id}-3, #${c.id}-5`),
+        reposition: 'drag',
+        dragWith: cy.$(`#${c.id}-3, #${c.id}-5`),
+      });
+
+      var removeTickPointer = function() {
+        cy.$(`#tick-pointer-5`).remove();
+        cy.$(`#tick-pointer-3`).remove();
+      };
+      cy.$(`#${c.id}-5-3-box`).on( 'dragfree', removeTickPointer );
+      cy.$(`#${c.id}-5-3-box`).on( 'drag', function() {
+        removeTickPointer();
+        var ruler_tick_pointer_pos = {
+          x_5: cy.$(`#${c.id}-5`).renderedPosition().x,
+          x_3: cy.$(`#${c.id}-3`).renderedPosition().x,
+          y: _this.ruler_render_start_pos.y
+        };
+        cy.add( [
+          {
+            data: { id: 'tick-pointer-5' },
+            renderedPosition: { x: ruler_tick_pointer_pos.x_5, y: ruler_tick_pointer_pos.y },
+            classes: 'ruler-tick-pointer'
+          },
+          {
+            data: { id: 'tick-pointer-3' },
+            renderedPosition: { x: ruler_tick_pointer_pos.x_3, y: ruler_tick_pointer_pos.y },
+            classes: 'ruler-tick-pointer'
+          },
+        ] );
+      } );
+
+    },
+
+    /**
      * make a contig Object for Cytoscape to render
      * @param {Object} contig { id, seq, length(actual_length) }
      * @param {Object} pos { x, y }
@@ -420,7 +434,6 @@ export default {
             id: `${contig.id}-5-3`, 
             source: `${contig.id}-5`, 
             target: `${contig.id}-3`, 
-            // sequence: contig.seq, 
             length: contig.length 
           },
           classes: 'contig-inner-edge',
