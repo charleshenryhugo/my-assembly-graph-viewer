@@ -38,10 +38,30 @@
           <ClustersViewer
             v-if="viewer_type==='clusters'"
           />
-          <GraphViewer
+
+          <Split
+            :gutterSize="5"
+            :direction="'vertical'"
             v-if="viewer_type==='graph'"
-            :graph_dir="graph_dir"
-          />
+          >
+            <SplitArea
+              :size="50"
+              :minSize="10"
+            >
+              <GraphViewer
+                :graph_dir="graph_dir"
+              />
+            </SplitArea>
+            <SplitArea
+              :size="50"
+              :minSize="10"
+            >
+              <PathsGraphViewer
+                :graph_dir="graph_dir"
+              />
+            </SplitArea>
+          </Split>
+
           <CommunitiesViewer
             v-if="viewer_type==='communities'"
             :communities="communities"
@@ -59,6 +79,7 @@
 import ClustersViewer from './components/ClustersViewer';
 import CommunitiesViewer from './components/CommunitiesViewer';
 import GraphViewer from './components/GraphViewer';
+import PathsGraphViewer from './components/PathsGraphViewer';
 import SidePanel from './components/SidePanel';
 
 // event bus for communication with SidePanel
@@ -70,7 +91,8 @@ export default {
     ClustersViewer,
     CommunitiesViewer,
     GraphViewer,
-    SidePanel
+    PathsGraphViewer,
+    SidePanel,
   },
 
   data() {
@@ -113,6 +135,9 @@ export default {
     EventBus.$on( 'viewer_type_clusters', function() {
       _this.viewer_type = 'clusters';
     } )
+  },
+
+  methods: {
   },
 
 }

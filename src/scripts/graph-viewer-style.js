@@ -14,7 +14,7 @@ module.exports = [
     {
         selector: 'edge',
         style: {
-            'width': 1,
+            'width': 0.5,
         }
     },
 
@@ -26,7 +26,7 @@ module.exports = [
             // 'label': 'data(name)',
             'label': '',
             'border-width': 0.1,
-            'padding': 2,
+            'padding': 3,
         }
     },
 
@@ -40,8 +40,7 @@ module.exports = [
             'label': 'data(name)',
             'font-size': 1,
             'text-valign': 'center',
-            'text-halign': 'center'
-            
+            'text-halign': 'center',
         }
     },
     // css for a contig rectangle( a bold edge )
@@ -50,10 +49,11 @@ module.exports = [
         style: {
             'width': 5,
             'line-color': '#00cc66',
-            'label': '', // 'data(length)',
-            'font-size': 1,
+            'label': 'data(name)', // 'data(length)',
+            'font-size': 2,
+            'text-margin-y': 4,
             'text-wrap': 'ellipsis',
-            'text-max-width': 50
+            'text-max-width': 50,
         }
     },
     // css for a linkage edge between 2 contigs

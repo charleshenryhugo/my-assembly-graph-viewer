@@ -41,8 +41,8 @@ export default {
       assembler: null,
       contigs: null,
       links: null,
+      all_paths: null,
 
-      contig_ids: null,
       contig_lens: null,
       MAX_CONTIG_LEN: 0.0,
       MIN_CONTIG_LEN: 0.0,
@@ -57,7 +57,7 @@ export default {
 
   created() {
     // load cytoscape css style and layout options
-    this.cy_opts.style = require('../scripts/style.js');
+    this.cy_opts.style = require('../scripts/graph-viewer-style.js');
     this.cy_opts.layout_options = require('../scripts/layout.js');
   },
 
@@ -65,7 +65,7 @@ export default {
     var _this = this;
 
     var rel_graph_dir = this.graph_dir.match(/(data\/.*cluster_.*\d|data\/isolated_contigs_cluster)$/)[0]
-    console.log('start loading graph: ' + rel_graph_dir)
+    console.log('GraphViewer starts loading graph: ' + rel_graph_dir)
 
     var contigs_file = `${rel_graph_dir}/contigs.json`;
     var links_file = `${rel_graph_dir}/links.json`;
@@ -106,18 +106,14 @@ export default {
       this.MIN_CONTIG_LEN = Math.min(...this.contig_lens);
       this.MAX_CONTIG_LEN = Math.max(...this.contig_lens);
 
-      this.contig_ids = this.contigs.map( c => c[0] );
       // contigs centers position
-      let contig_centers = this.contigs.map(function(c) {
+      let contig_centers = this.contigs.map( c => {
         return {
-          data: { id: c[0] }
+          data: { id: c[0], length: Number(c[2].slice(5)) }
         };
       });
       // links among contigs
-      this.links = this.links.filter( function(l) {
-        return _this.contig_ids.includes(l[0]) && _this.contig_ids.includes(l[2]);
-      } );
-      let contig_centers_links = this.links.map(function(l) {
+      let contig_centers_links = this.links.map( l => {
         return {
           data: {
             id: `${l[0]}${l[2]}`, source: l[0], target: l[2]
@@ -129,8 +125,8 @@ export default {
         container: document.querySelector('#GraphViewer'),
 
         elements: {
-            nodes: contig_centers,
-            edges: contig_centers_links
+          nodes: contig_centers,
+          edges: contig_centers_links
         },
 
         // https://github.com/cytoscape/cytoscape.js-klay
@@ -144,6 +140,9 @@ export default {
 
       // render contig-link-edge among contigs
       this.renderLinks();
+
+      // let cy resize with #GraphViewer
+      this.makeCyResizable();
 
     }, // end of renderCy()
 
@@ -195,11 +194,6 @@ export default {
         var control_point_distances, control_point_weights;
         var cigar = l[4];
         var use_class = 'contig-link-edge';
-
-        // break forEach if a link's source or end not in current this.contigs
-        if ( !_this.contig_ids.includes(source) || !_this.contig_ids.includes(target) ) {
-          return
-        }
 
         // self loop if source === target
         var is_self_loop = ( source === target );
@@ -326,18 +320,6 @@ export default {
     }, // end of renderRuler()
 
     /**
-     * adjust cytoscape viewport, pan, etc.
-     */
-    cyAdjust() {
-      cy.viewport({
-        // zoom: 3.5,
-        pan: { x: 0 }
-      });
-      cy.minZoom(1);
-      cy.maxZoom(10);
-    },
-
-    /**
      * fit range from=>[lower, upper] to=>[lower, upper]
      * @param {Number} num 
      * @param {Array} from [0:lower, 1:upper]
@@ -409,7 +391,7 @@ export default {
 
     /**
      * make a contig Object for Cytoscape to render
-     * @param {Object} contig { id, seq, length(actual_length) }
+     * @param {Object} contig { id, length(actual_length) }
      * @param {Object} pos { x, y }
      * @return {Array} [ contig-end-node-box, 5-end, 3-end, contig_inner_edge ]
      */
@@ -432,6 +414,7 @@ export default {
         {
           data: { 
             id: `${contig.id}-5-3`, 
+            name: '',
             source: `${contig.id}-5`, 
             target: `${contig.id}-3`, 
             length: contig.length 
@@ -448,7 +431,32 @@ export default {
     search_contig_by_id(contig_id) {
       cy.edges().removeClass('highlighted-contig-inner-edge');
       cy.$(`#${contig_id}-5-3`).addClass('highlighted-contig-inner-edge');
-    }
+    },
+
+    /**
+     * adjust cytoscape viewport, pan, etc.
+     */
+    cyAdjust() {
+      cy.viewport({
+        zoom: 5,
+        pan: { x: 0 }
+      });
+      cy.minZoom(1);
+      cy.maxZoom(10);
+    },
+
+    /**
+     * make cy resize with #GraphViewer
+     * this may not work for some browsers
+     */
+    makeCyResizable() {
+      // listen to #GraphViewer resize event
+      new ResizeObserver( entries => {
+        cy.resize();
+      }).observe(
+        document.querySelector('#GraphViewer')
+      );
+    },
   }
 }
 
@@ -458,7 +466,7 @@ export default {
   #GraphViewer {
     height: 100%;
     width: 100%;
-    position: absolute;
+    position: relative;
     left: 0;
     top: 0;
   }
