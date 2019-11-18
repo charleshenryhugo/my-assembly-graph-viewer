@@ -191,9 +191,8 @@ export default {
         var source = l[0];
         var target = l[2];
         var line_color = '#006666';
-        var control_point_distances, control_point_weights;
-        var cigar = l[4];
-        var use_class = 'contig-link-edge';
+        var control_point_distances;
+        var control_point_weights;
 
         // self loop if source === target
         var is_self_loop = ( source === target );
@@ -239,9 +238,8 @@ export default {
               line_color: line_color,
               control_point_distances: control_point_distances,
               control_point_weights: control_point_weights,
-              cigar: cigar
             },
-            classes: use_class,
+            classes: 'contig-link-edge',
           });
         } // end of if: remove edge duplication
 
@@ -351,6 +349,7 @@ export default {
     /**
      * add a contig to cy
      * @param {Object} c { id, length(actual_length) }
+     * @param {Object} pos { x, y }
      */
     addContig(c, pos) {
       var _this = this;
@@ -414,7 +413,7 @@ export default {
         {
           data: { 
             id: `${contig.id}-5-3`, 
-            name: '',
+            name: `${contig.id}`,
             source: `${contig.id}-5`, 
             target: `${contig.id}-3`, 
             length: contig.length 

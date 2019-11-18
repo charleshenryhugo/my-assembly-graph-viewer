@@ -76,8 +76,9 @@ def decompose_multi_graph_communities(cur_work_dir, cluster_id, community_id, mu
         ]
 
         links_collection = [
-            link[2] 
-            for link in MG.edges( multi_graph.nodes(), data = 'desc')
+            link[2]
+            #for link in MG.edges( multi_graph.nodes(), data = 'desc')
+            for link in multi_graph.edges.data('desc')
         ]
 
         contigs_outfile_name = \
@@ -128,7 +129,7 @@ def main(argv):
     # parse GFA file
     # construct contigs_dict and MG
     if not argv[0] is None:
-        parse_gfa( str(argv[0]) )
+        parse_gfa( str( argv[0]) )
 
     # set assembler name
     if not argv[1] is None:

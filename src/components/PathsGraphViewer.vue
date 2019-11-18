@@ -45,8 +45,10 @@ export default {
       contig_lens: null,
       MAX_CONTIG_LEN: 0.0,
       MIN_CONTIG_LEN: 0.0,
-      MAX_CONTIG_DISPLAY_LEN: 50.0,
-      MIN_CONTIG_DISPLAY_LEN: 6.0,
+      MAX_CONTIG_DISPLAY_LEN: 25.0,
+      MIN_CONTIG_DISPLAY_LEN: 3.0,
+
+      path_line_spacing: 15.0,
 
     }
   },
@@ -105,13 +107,19 @@ export default {
       this.links.forEach( l => {
         if ( !cy.$(`#${l[0]}${l[2]}`).length && !cy.$(`#${l[2]}${l[0]}`).length ) {
           cy.add({
-            data: { id: `${l[0]}${l[2]}`, source: l[0], target: l[2] }
+            data: {
+              id: `${l[0]}${l[2]}`,
+              source: l[0],
+              target: l[2],
+              link: l,
+            }
           });
         }
       });
 
       // render all paths
       this.renderPaths();
+      // this.renderLinks();
 
       // let cy resize with #PathsGraphViewer
       this.makeCyResizable();
@@ -126,25 +134,83 @@ export default {
 
       let all_paths = cy.elements().cytoscapeAllPaths();
       cy.nodes().remove();
+      // console.log(all_paths);
 
-      var line = 0;
-      all_paths.forEach( path => {
+      all_paths.forEach( (path, path_id) => {
         var x = 0;
+        // add contigs
         path.forEach( ele => {
-          var ele_id = ele.data().id;
           if ( ele.isEdge() ) { return; }
 
-          if ( cy.$(`#${ele_id}-5-3`).length ) { return; }
+          var contig = {
+            id: `path-${path_id}-${ele.data().id}`,
+            actual_id: ele.data().id,
+            length: ele.data().length,
+          }
 
-          var x_step = _this.displayLength( ele.data().length );
+          if ( cy.$(`#${contig.id}-5-3`).length ) { return; }
+
+          var x_step = _this.displayLength( contig.length );
           x += x_step;
           _this.addContig(
-            ele.data(), { x: x, y: 10 * line } 
+            contig,
+            { x: x, y: _this.path_line_spacing * path_id },
           );
-          x += x_step + 1;
+          x += x_step + 2;
 
         });
-        line += 1;
+        // add links
+        path.forEach( ele => {
+          if ( !ele.isEdge() ) { return; }
+          _this.addLink( ele.data().link, path_id);
+        });
+      });
+    },
+
+    /**
+     * add a link to cy
+     * @param {Object} link ['contig1_id', '+' ,'contig2_id', '-', ...]
+     * @param {Number} path_id i
+     */
+    addLink(link, path_id) {
+      var source = `path-${path_id}-${link[0]}`;
+      var target = `path-${path_id}-${link[2]}`;
+
+      var control_point_param = 0.1;
+      var control_point_weights = [0, 0];
+      
+      if (link[1] === '+') {
+        source = `${source}-3`;
+        control_point_weights[0] = control_point_param;
+      } else if (link[1] === '-') {
+        source = `${source}-5`;
+        control_point_weights[0] = -control_point_param;
+      }
+      if (link[3] === '+') {
+        target = `${target}-5`;
+        control_point_weights[1] = -control_point_param + 1;
+      } else if (link[3] === '-') {
+        target = `${target}-3`;
+        control_point_weights[1] = control_point_param + 1;
+      }
+
+      var delta_x = cy.$(`#${target}`).position().x - cy.$(`#${source}`).position().x;
+      var control_point_distances = [ Math.abs(delta_x), Math.abs(delta_x) ].map( n => 0.4 * n );
+
+      if (link[0] === link[2]) { // self loop
+        control_point_weights = [-0.2, 1.2];
+        control_point_distances = [ Math.abs(delta_x), Math.abs(delta_x) ].map( n => 0.2 * n );
+      }
+      cy.add({
+        data: {
+          id: `${source}-${target}`,
+          source: source,
+          target: target,
+          line_color: '#006666',
+          control_point_distances: control_point_distances,
+          control_point_weights: control_point_weights,
+        },
+        classes: 'contig-link-edge',
       });
     },
 
@@ -179,22 +245,25 @@ export default {
 
     /**
      * add a contig to cy
-     * @param {Object} c { id, length(actual_length) }
+     * @param {Object} contig { id, length(actual_length) }
+     * @param {Object} pos { x, y }
      */
-    addContig(c, pos) {
+    addContig(contig, pos) {
       var _this = this;
-      cy.add( _this.makeContig(c, pos) );
+
+      cy.add( _this.makeContig(contig, pos) );
+
       cy.automove({
-        nodesMatching: cy.$(`#${c.id}-3, #${c.id}-5`),
+        nodesMatching: cy.$(`#${contig.id}-3, #${contig.id}-5`),
         reposition: 'drag',
-        dragWith: cy.$(`#${c.id}-3, #${c.id}-5`),
+        dragWith: cy.$(`#${contig.id}-3, #${contig.id}-5`),
       });
 
     },
 
     /**
      * make a contig Object for Cytoscape to render
-     * @param {Object} contig { id, length(actual_length) }
+     * @param {Object} contig { id, actual_id, length(actual_length) }
      * @param {Object} pos { x, y }
      * @return {Array} [ contig-end-node-box, 5-end, 3-end, contig_inner_edge ]
      */
@@ -213,7 +282,7 @@ export default {
         {
           data: { 
             id: `${contig.id}-5-3`,
-            name: `${contig.id}`,
+            name: `${contig.actual_id}`,
             source: `${contig.id}-5`,
             target: `${contig.id}-3`,
             length: contig.length

@@ -36,7 +36,7 @@ module.exports = [
         selector: '.contig-inner-edge',
         style: {
             'width': 5,
-            'line-color': '#008000',
+            'line-color': '#87ceeb',
             'label': 'data(name)', // 'data(length)',
             'font-size': 2,
             'text-margin-y': 4,
@@ -49,13 +49,13 @@ module.exports = [
         selector: '.contig-link-edge',
         style: {
             'width': 0.1,
-            //'line-color': 'data(line_color)',
-            //'curve-style': 'unbundled-bezier',
-            //'control-point-distances': 'data(control_point_distances)',
-            //'control-point-weights': 'data(control_point_weights)',
-            // 'target-arrow-color': '#006666',
-            // 'target-arrow-shape': 'triangle',
-            // 'arrow-scale': 0.1,
+            'line-color': 'data(line_color)',
+            'curve-style': 'unbundled-bezier',
+            'control-point-distances': 'data(control_point_distances)',
+            'control-point-weights': 'data(control_point_weights)',
+            'target-arrow-color': '#006666',
+            'target-arrow-shape': 'vee',
+            'arrow-scale': 0.1,
         }
     },
     // css for highlighted contigs
