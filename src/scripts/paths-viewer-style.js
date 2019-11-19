@@ -48,14 +48,14 @@ module.exports = [
     {
         selector: '.contig-link-edge',
         style: {
-            'width': 0.1,
-            'line-color': 'data(line_color)',
+            'width': 0.2,
+            'line-color': '#ffb266',
             'curve-style': 'unbundled-bezier',
             'control-point-distances': 'data(control_point_distances)',
             'control-point-weights': 'data(control_point_weights)',
-            'target-arrow-color': '#006666',
+            'target-arrow-color': '#ffb266',
             'target-arrow-shape': 'vee',
-            'arrow-scale': 0.1,
+            'arrow-scale': 0.2,
         }
     },
     // css for highlighted contigs
@@ -83,9 +83,9 @@ module.exports = [
             'shape': 'diamond',
             'width': 0.5,
             'height': 5,
-            'background-color': '#0018cc',
+            'background-color': '#006666',
             'label': 'data(name)',
-            'font-size': 5
+            'font-size': 3
         }
     },
     // css for ruler tick pointer

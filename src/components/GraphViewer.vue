@@ -41,7 +41,6 @@ export default {
       assembler: null,
       contigs: null,
       links: null,
-      all_paths: null,
 
       contig_lens: null,
       MAX_CONTIG_LEN: 0.0,
@@ -49,9 +48,8 @@ export default {
       MAX_CONTIG_DISPLAY_LEN: 25.0,
       MIN_CONTIG_DISPLAY_LEN: 3.0,
 
-      ruler_render_start_pos: {
-        x: 0, y: 50
-      }
+      ruler_start_pos: { x: 0, y: 50 },
+      ruler_render_start_pos: { x: 0, y: 50 }
     }
   },
 
@@ -190,7 +188,6 @@ export default {
       this.links.forEach( function(l) {
         var source = l[0];
         var target = l[2];
-        var line_color = '#006666';
         var control_point_distances;
         var control_point_weights;
 
@@ -235,7 +232,6 @@ export default {
               id: `${source}-${target}`,
               source: source,
               target: target,
-              line_color: line_color,
               control_point_distances: control_point_distances,
               control_point_weights: control_point_weights,
             },
@@ -282,7 +278,7 @@ export default {
         rendered_length: cy.$( `#${longest_contig_id}-3` ).renderedPosition().x - cy.$( `#${longest_contig_id}-5` ).renderedPosition().x // pixel
       };
 
-      for ( var t = 0; t < 300; t++ ) {
+      for ( var t = 0; t < 100; t++ ) {
         // TODO make Label number more reasonable
         var toLabel = function(t) {
           if ( t == 0 ) { return '0'; }
@@ -296,7 +292,7 @@ export default {
         cy.add( [
             {
               data: { id: `ruler-tick-${t}`, name: toLabel(t) },
-              renderedPosition: { x: _this.ruler_render_start_pos.x + shortest_contig.rendered_length * t, y: _this.ruler_render_start_pos.y},
+              position: { x: _this.ruler_start_pos.x + shortest_contig.logic_length * t, y: _this.ruler_start_pos.y },
               pannable: false,
               grabbable: false, 
               classes: ( t % 5 == 0 ) ? 'ruler-tick-large' : 'ruler-tick'
@@ -306,13 +302,9 @@ export default {
       }
 
       // fix y coordinate while panning(or zooming)
-      cy.on('pan', function() {
-        for ( var t = 0; t < 300; t++ ) {
-          var x = cy.$(`#ruler-tick-${t}`).renderedPosition().x;
-          cy.$(`#ruler-tick-${t}`).renderedPosition({
-            x: x, y: 50
-          })
-        }
+      cy.on('pan', () => {
+        cy.$('.ruler-tick-large').renderedPosition('y', _this.ruler_render_start_pos.y);
+        cy.$('.ruler-tick').renderedPosition('y', _this.ruler_render_start_pos.y);
       });
 
     }, // end of renderRuler()
@@ -438,7 +430,7 @@ export default {
     cyAdjust() {
       cy.viewport({
         zoom: 5,
-        pan: { x: 0 }
+        pan: { x: 50, y: 50 }
       });
       cy.minZoom(1);
       cy.maxZoom(10);

@@ -50,6 +50,8 @@ export default {
 
       path_line_spacing: 15.0,
 
+      ruler_start_pos: { x: 0, y: 50 },
+      ruler_render_start_pos: { x: 0, y: 50 }
     }
   },
 
@@ -73,6 +75,7 @@ export default {
         _this.contigs = contigs_response.data;
         _this.links = links_response.data;
         _this.renderCy();
+        _this.renderRuler();
         _this.cyAdjust();
       } );
 
@@ -176,7 +179,7 @@ export default {
       var source = `path-${path_id}-${link[0]}`;
       var target = `path-${path_id}-${link[2]}`;
 
-      var control_point_param = 0.1;
+      var control_point_param = 0.2;
       var control_point_weights = [0, 0];
       
       if (link[1] === '+') {
@@ -195,7 +198,7 @@ export default {
       }
 
       var delta_x = cy.$(`#${target}`).position().x - cy.$(`#${source}`).position().x;
-      var control_point_distances = [ Math.abs(delta_x), Math.abs(delta_x) ].map( n => 0.4 * n );
+      var control_point_distances = [ Math.abs(delta_x), Math.abs(delta_x) ].map( n => 0.2 * n );
 
       if (link[0] === link[2]) { // self loop
         control_point_weights = [-0.2, 1.2];
@@ -206,7 +209,6 @@ export default {
           id: `${source}-${target}`,
           source: source,
           target: target,
-          line_color: '#006666',
           control_point_distances: control_point_distances,
           control_point_weights: control_point_weights,
         },
@@ -259,6 +261,31 @@ export default {
         dragWith: cy.$(`#${contig.id}-3, #${contig.id}-5`),
       });
 
+      var removeTickPointer = () => {
+        cy.$('.ruler-tick-pointer').remove();
+      };
+      cy.$(`#${contig.id}-3, #${contig.id}-5`).on( 'dragfree', removeTickPointer );
+      cy.$(`#${contig.id}-3, #${contig.id}-5`).on( 'drag', () => {
+        removeTickPointer();
+        var ruler_tick_pointer_pos = {
+          x_5: cy.$(`#${contig.id}-5`).renderedPosition().x,
+          x_3: cy.$(`#${contig.id}-3`).renderedPosition().x,
+          y: _this.ruler_render_start_pos.y
+        };
+        cy.add([
+          {
+            data: { id: 'tick-pointer-5' },
+            renderedPosition: { x: ruler_tick_pointer_pos.x_5, y: ruler_tick_pointer_pos.y },
+            classes: 'ruler-tick-pointer'
+          },
+          {
+            data: { id: 'tick-pointer-3' },
+            renderedPosition: { x: ruler_tick_pointer_pos.x_3, y: ruler_tick_pointer_pos.y },
+            classes: 'ruler-tick-pointer'
+          },
+        ]);
+      } );
+
     },
 
     /**
@@ -290,6 +317,60 @@ export default {
           classes: 'contig-inner-edge',
         }
       ];
+    },
+
+    /**
+     * load and render ruler. 
+     * execute while init and update
+     */
+    renderRuler() {
+      var _this = this;
+
+      // calculate ruler rates
+      // actual_length, logic_length, rendered_length
+      var shortest_contig_inner_edge = cy.edges().filter(
+        (edge) => ( edge.data().length === _this.MIN_CONTIG_LEN )
+      )[0].data();
+      var longest_contig_inner_edge = cy.edges().filter( 
+        (edge) => ( edge.data().length === _this.MAX_CONTIG_LEN )
+      )[0].data();
+
+      var shortest_contig = {
+        actual_length: this.MIN_CONTIG_LEN, // [100k ~ 200k]
+        logic_length: cy.$( `#${shortest_contig_inner_edge.target}` ).position().x - cy.$( `#${shortest_contig_inner_edge.source}` ).position().x, // [3x2 ~ 25x2]
+        rendered_length: cy.$( `#${shortest_contig_inner_edge.target}` ).renderedPosition().x - cy.$( `#${shortest_contig_inner_edge.source}` ).renderedPosition().x // pixel
+      };
+
+      var longest_contig = {
+        actual_length: this.MAX_CONTIG_LEN, // [100k ~ 200k]
+        logic_length: cy.$( `#${longest_contig_inner_edge.target}` ).position().x - cy.$( `#${longest_contig_inner_edge.source}` ).position().x, // [3x2 ~ 25x2]
+        rendered_length: cy.$( `#${longest_contig_inner_edge.target}` ).renderedPosition().x - cy.$( `#${longest_contig_inner_edge.source}` ).renderedPosition().x // pixel
+      };
+
+      for ( var t = 0; t < 100; t++ ) {
+        // TODO make Label number more reasonable
+        var toLabel = function(t) {
+          if ( t == 0 ) { return '0'; }
+          var result = _this.fitRange(
+            shortest_contig.rendered_length * t,
+            [ shortest_contig.rendered_length, longest_contig.rendered_length ],
+            [ _this.MIN_CONTIG_LEN, _this.MAX_CONTIG_LEN ]
+          );
+          return ( result <= 1000.0 ) ? d3.format('.0f')(result) : d3.format('.0f')( result / 1000.0 ) + 'K';
+        };
+        cy.add({
+          data: { id: `ruler-tick-${t}`, name: toLabel(t) },
+          position: { x: _this.ruler_start_pos.x + shortest_contig.logic_length * t, y: _this.ruler_start_pos.y },
+          pannable: false,
+          grabbable: false, 
+          classes: ( t % 5 == 0 ) ? 'ruler-tick-large' : 'ruler-tick'
+        });
+      }
+      cy.on('pan', () => {
+        cy.$('.ruler-tick-large').renderedPosition('y', _this.ruler_render_start_pos.y);
+        cy.$('.ruler-tick').renderedPosition('y', _this.ruler_render_start_pos.y);
+      });
+
     },
 
     /**
