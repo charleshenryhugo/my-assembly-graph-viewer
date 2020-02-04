@@ -45,8 +45,8 @@ export default {
       contig_lens: null,
       MAX_CONTIG_LEN: 0.0,
       MIN_CONTIG_LEN: 0.0,
-      MAX_CONTIG_DISPLAY_LEN: 25.0,
-      MIN_CONTIG_DISPLAY_LEN: 3.0,
+      MAX_CONTIG_DISPLAY_LEN: 50.0,
+      MIN_CONTIG_DISPLAY_LEN: 6.0,
 
       ruler_start_pos: { x: 0, y: 50 },
       ruler_render_start_pos: { x: 0, y: 50 }
@@ -278,7 +278,7 @@ export default {
         rendered_length: cy.$( `#${longest_contig_id}-3` ).renderedPosition().x - cy.$( `#${longest_contig_id}-5` ).renderedPosition().x // pixel
       };
 
-      for ( var t = 0; t < 100; t++ ) {
+      for ( var t = 0; t < 300; t++ ) {
         // TODO make Label number more reasonable
         var toLabel = function(t) {
           if ( t == 0 ) { return '0'; }

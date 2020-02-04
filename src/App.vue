@@ -70,8 +70,8 @@
       </v-container>
     </v-content>
 
-    <v-bottom-navigation app>
-    </v-bottom-navigation>
+    <!-- <v-bottom-navigation app>
+    </v-bottom-navigation> -->
   </v-app>
 </template>
 

@@ -97,7 +97,7 @@ module.exports = [
             'height': 5,
             'background-color': '#006666',
             'label': 'data(name)',
-            'font-size': 3
+            'font-size': 5
         }
     },
     // css for ruler tick pointer
