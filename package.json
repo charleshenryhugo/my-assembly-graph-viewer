@@ -20,7 +20,7 @@
     "vue": "^2.6.10",
     "vue-multipane": "^0.9.5",
     "vue-split-panel": "^1.0.4",
-    "vuetify": "^2.0.0"
+    "vuetify": "^2.6.10"
   },
   "devDependencies": {
     "@mdi/font": "^4.5.95",
